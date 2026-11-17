@@ -65,7 +65,7 @@
   const badges = (it) => {
     const pl = it.platform === 'Instagram' ? '<span class="badge ig">Instagram</span>' : '<span class="badge tt">TikTok</span>';
     const sz = it.size === 'small' ? '<span class="badge ok">Under 50k</span>' : '<span class="badge core">Big account</span>';
-    return `${pl}${sz}<span class="badge warn">From caption</span>`;
+    return `${pl}${sz}<span class="badge muted">From caption</span>`;
   };
   const card = (it) => {
     const usual = Math.max(1.5, (it.median / it.metric) * 100);
