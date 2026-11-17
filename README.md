@@ -5,7 +5,7 @@ A browsable page of viral outlier posts from TikTok and Instagram, found by Treg
 Open it: https://gabmiren.github.io/Viral-Content-Scraping/
 
 ## What's on the page
-- **All outliers**: the top 50 from the latest scan.
+- **TikTok top 30** and **Instagram top 30**: ranked separately, because the two platforms reward different things. **Both** shows them together.
 - **TikTok** and **Instagram**: the same list split by platform.
 - **★ Saved**: ideas you starred. Saved in your browser.
 
@@ -15,9 +15,11 @@ Filter by account size (under 50k, or big accounts at 10x+) and by the topic sea
 - TikTok: post views divided by the median views of the account's latest ~20 videos.
 - Instagram: likes divided by the median likes of the latest 12 posts (hashtag results give no views).
 - Accounts under 50k followers need 3x or more. Bigger accounts need 10x or more.
+- TikTok: the top 24 small-account posts plus the 6 biggest big-account outliers.
+- Instagram: only 14 posts cleared the strict rule, so the list is topped up with big-account posts at 3x or more (tagged "Big account 3x+").
 - "What it is" lines are written from captions, not from watching the videos.
 
 ## Updating after a scan
-1. Replace `data/top50.csv` (same columns) and edit `data/meta.json`.
+1. Replace `data/top30.csv` (same columns) and edit `data/meta.json`.
 2. Run `python3 scripts/build_data.py` to rebuild `data.js`.
 3. Commit and push. GitHub Pages updates in about a minute.

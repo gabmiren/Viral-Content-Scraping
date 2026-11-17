@@ -25,13 +25,13 @@
   const meter = (x) => Math.max(6, Math.min(100, (Math.log10(Math.max(x || 1, 1)) / maxLog) * 100));
 
   // ---- state ----
-  const st = { tab: location.hash.slice(1) || 'all', size: '', topic: '', q: '', sort: 'rank', view: 'cards', hideUsed: false };
+  const st = { tab: location.hash.slice(1) || 'tiktok', size: '', topic: '', q: '', sort: 'rank', view: 'cards', hideUsed: false };
   try { const v = localStorage.getItem('vor_view'); if (v) st.view = v; } catch {}
 
   const HINTS = {
-    all: 'Top 50 posts from 12 to 17 Nov that beat their own account’s usual numbers. Tap the caption box to copy it. ★ saves an idea, ✓ marks it as used once you have made it.',
-    tiktok: 'TikTok outliers, scored on views against the account’s median over its latest ~20 videos.',
-    instagram: 'Instagram outliers. Hashtag results give no views, so these compare likes against the account’s latest 12 posts.',
+    all: 'Both top 30s side by side. Ranks are per platform, since TikTok and Instagram reward different things. Tap the caption box to copy it. ★ saves an idea, ✓ marks it as used.',
+    tiktok: 'TikTok top 30, scored on views against the account’s median over its latest ~20 videos. 24 from accounts under 50k (3x+), plus the 6 biggest outliers from large accounts (10x+).',
+    instagram: 'Instagram top 30, scored on likes against the account’s latest 12 posts (hashtag results give no views). Only 14 posts cleared the strict rule, so the list is topped up with large-account posts at 3x+, marked “Big account 3x+”.',
     saved: 'Everything you starred. Saved in this browser.',
   };
 
@@ -48,7 +48,7 @@
   };
   const sorter = (a, b) => {
     const k = st.sort;
-    if (k === 'rank') return (a.rank ?? 1e9) - (b.rank ?? 1e9);
+    if (k === 'rank') return (a.rank ?? 1e9) - (b.rank ?? 1e9) || a.platform.localeCompare(b.platform);
     if (k === 'followers') return (a.followers ?? 1e12) - (b.followers ?? 1e12);
     if (k === 'length_s') return (a.length_s ?? 1e9) - (b.length_s ?? 1e9);
     if (k === 'posted') return b.posted.localeCompare(a.posted) || a.rank - b.rank;
@@ -64,7 +64,7 @@
   // ---- renderers ----
   const badges = (it) => {
     const pl = it.platform === 'Instagram' ? '<span class="badge ig">Instagram</span>' : '<span class="badge tt">TikTok</span>';
-    const sz = it.size === 'small' ? '<span class="badge ok">Under 50k</span>' : '<span class="badge core">Big account</span>';
+    const sz = it.size === 'small' ? '<span class="badge ok">Under 50k</span>' : '<span class="badge core">' + (it.platform === 'Instagram' && it.x < 10 ? 'Big account 3x+' : 'Big account') + '</span>';
     return `${pl}${sz}<span class="badge muted">From caption</span>`;
   };
   const card = (it) => {
@@ -188,8 +188,8 @@
   // ---- boot ----
   const m = D.meta || {};
   const small = ALL.filter((it) => it.size === 'small').length;
-  $('#meta-line').textContent = `Updated ${m.updated || ''} · Posts from ${m.window || 'the last 5 days'} · ${ALL.length} outliers, ${small} from accounts under 50k`;
-  if (!['all', 'tiktok', 'instagram', 'saved'].includes(st.tab)) st.tab = 'all';
+  $('#meta-line').textContent = `Updated ${m.updated || ''} · Posts from ${m.window || 'the last 5 days'} · Top 30 TikTok + top 30 Instagram, ${small} from accounts under 50k`;
+  if (!['all', 'tiktok', 'instagram', 'saved'].includes(st.tab)) st.tab = 'tiktok';
   counts();
   render();
 })();

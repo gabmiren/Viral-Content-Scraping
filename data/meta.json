@@ -1,7 +1,7 @@
 {
   "updated": "17 Nov 2026",
   "window": "12 to 17 Nov 2026",
-  "scanned_accounts": 214,
-  "spend_usd": 0.24,
-  "notes": "Outlier = post views over the account's median views (TikTok, last ~20 posts) or likes over median likes (Instagram, last 12 posts). Under 50k followers needs 3x+, bigger accounts need 10x+. Descriptions are written from captions."
+  "scanned_accounts": 262,
+  "spend_usd": 0.41,
+  "notes": "Top 30 per platform. Outlier = post views over the account's median views (TikTok, last ~20 posts) or likes over median likes (Instagram, last 12 posts). Under 50k followers needs 3x+, bigger accounts need 10x+. Instagram is topped up with big-account posts at 3x+ because only 14 cleared the strict rule. Descriptions are written from captions."
 }

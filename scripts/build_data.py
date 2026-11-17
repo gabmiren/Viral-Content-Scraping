@@ -23,7 +23,7 @@ mp = os.path.join(D, 'meta.json')
 if os.path.exists(mp): meta = json.load(open(mp))
 meta['built'] = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%MZ')
 
-out = {'meta': meta, 'posts': load('top50.csv')}
+out = {'meta': meta, 'posts': load('top30.csv')}
 with open(os.path.join(ROOT, 'data.js'), 'w', encoding='utf-8') as f:
     f.write('window.DATA = ' + json.dumps(out, ensure_ascii=False) + ';\n')
 print({'posts': len(out['posts'])})
