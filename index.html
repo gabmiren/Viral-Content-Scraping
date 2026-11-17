@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viral Outlier Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout idea: slim summary, sticky filter rail, card grid that opens a side drawer per post */
+  --bg: #0d0e12;
+  --surface: #16171d;
+  --surface-2: #1e2028;
+  --line: #2a2c36;
+  --text: #ecebf2;
+  --muted: #9a99a8;
+  --accent: #ff6b8b;
+  --small: #4fd1a5;
+  --big: #f5b45a;
+  --tt: #e9e9ef;
+  --ig: #d77bff;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Geist", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+a { color: inherit; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 1320px; margin: 0 auto; padding: 0 20px; }
+
+header.top { padding-top: 28px; padding-bottom: 18px; display: grid; gap: 18px; }
+.title-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 68ch; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { display: flex; align-items: baseline; gap: 8px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); white-space: nowrap; }
+.stat b { font-family: var(--font-mono); font-weight: 500; font-size: 15px; }
+.stat small { color: var(--muted); font-size: 12.5px; }
+
+.rail { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.rail-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 0; }
+.search { flex: 1 1 240px; position: relative; }
+.search input { width: 100%; padding: 9px 12px 9px 34px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 6px 11px; border-radius: 7px; cursor: pointer; color: var(--muted); white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.seg button:hover { color: var(--text); }
+.ctl-label { font-size: 12px; color: var(--muted); margin-right: 4px; }
+select { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.result-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 0 6px; color: var(--muted); font-size: 13.5px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.chip:hover { color: var(--text); border-color: var(--muted); }
+.chip.on { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.linkish { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; font-size: 13.5px; }
+
+/* Grid of posts */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; padding: 8px 0 40px; }
+.card { position: relative; display: grid; grid-template-rows: auto auto 1fr auto; gap: 12px; text-align: left; padding: 16px 16px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; cursor: pointer; transition: border-color .15s, transform .15s; }
+.card:hover { border-color: #444756; transform: translateY(-2px); }
+.card-head { display: flex; align-items: center; gap: 10px; }
+.rank { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); border: 1px solid var(--line); }
+.who { min-width: 0; flex: 1; }
+.handle { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { color: var(--muted); font-size: 12.5px; display: flex; gap: 6px; flex-wrap: wrap; }
+.plat { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.dot.tt { background: var(--tt); }
+.dot.ig { background: var(--ig); }
+.size-tag { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.size-tag.small { color: var(--small); background: color-mix(in srgb, var(--small) 14%, transparent); }
+.size-tag.big { color: var(--big); background: color-mix(in srgb, var(--big) 14%, transparent); }
+
+.hero { display: grid; gap: 8px; }
+.mult { display: flex; align-items: baseline; gap: 8px; }
+.mult b { font-family: var(--font-display); font-weight: 700; font-size: 34px; letter-spacing: -0.02em; line-height: 1; }
+.mult small { color: var(--muted); font-size: 12.5px; }
+.meter { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), var(--accent)); }
+.note { margin: 0; color: var(--text); font-size: 14px; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 12.5px; color: var(--muted); }
+.foot .num { color: var(--text); }
+
+/* List view */
+.list { display: none; padding: 8px 0 40px; }
+.list.show { display: block; }
+.grid.hide { display: none; }
+.row { display: grid; grid-template-columns: 44px minmax(150px, 1.3fr) 110px 100px minmax(160px, 2fr) 120px 100px; gap: 12px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.row:hover { background: var(--surface); }
+.row.head { cursor: default; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 61px; background: var(--bg); z-index: 5; }
+.row.head:hover { background: var(--bg); }
+.row .r-mult { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.row .ellip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-scroll { overflow-x: auto; }
+.list-scroll > div { min-width: 860px; }
+
+.empty { padding: 60px 0; text-align: center; color: var(--muted); display: none; }
+.empty.show { display: block; }
+
+/* Drawer */
+.scrim { position: fixed; inset: 0; background: rgba(5,5,8,.6); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(480px, 100%); background: var(--surface); border-left: 1px solid var(--line); transform: translateX(100%); transition: transform .22s ease; z-index: 50; display: flex; flex-direction: column; }
+.drawer.open { transform: translateX(0); }
+.d-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.d-nav { display: flex; gap: 6px; }
+.icon-btn { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; }
+.icon-btn:hover { border-color: var(--muted); }
+.icon-btn:disabled { opacity: .35; cursor: default; }
+.d-body { padding: 18px 18px 28px; overflow-y: auto; display: grid; gap: 20px; align-content: start; }
+.d-title { display: grid; gap: 6px; }
+.d-title h2 { font-family: var(--font-display); font-size: 24px; margin: 0; letter-spacing: -0.01em; word-break: break-word; }
+.d-big { display: flex; align-items: baseline; gap: 10px; }
+.d-big b { font-family: var(--font-display); font-size: 52px; line-height: 1; letter-spacing: -0.03em; color: var(--accent); }
+.compare { display: grid; gap: 10px; }
+.cmp-row { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: center; font-size: 13px; }
+.cmp-row .bar { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.cmp-row .bar i { display: block; height: 100%; border-radius: 999px; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.fact { background: var(--surface); padding: 10px 12px; display: grid; gap: 2px; }
+.fact small { color: var(--muted); font-size: 12px; }
+.section-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; }
+.caption { margin: 0; padding: 12px 14px; background: var(--surface-2); border-radius: 12px; font-size: 13.5px; color: var(--text); word-break: break-word; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); text-decoration: none; cursor: pointer; font-weight: 500; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1a0a10; }
+.btn:hover { filter: brightness(1.08); }
+.embed { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+.embed iframe { display: block; width: 100%; border: 0; }
+.embed-note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 999px; font-size: 13.5px; opacity: 0; transition: all .2s; z-index: 60; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+footer.method { border-top: 1px solid var(--line); padding-top: 24px; padding-bottom: 40px; color: var(--muted); font-size: 13.5px; display: grid; gap: 8px; }
+footer.method p { margin: 0; max-width: 90ch; }
+footer.method b { color: var(--text); font-weight: 500; }
+
+@media (max-width: 640px) {
+  .seg button { padding: 6px 8px; }
+  .d-big b { font-size: 44px; }
+  .row.head { top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="top wrap">
+  <div class="title-row">
+    <div>
+      <h1>Viral Outlier <span>Board</span></h1>
+      <p class="sub">Top 50 posts on TikTok and Instagram that beat their own account's usual numbers. Posted 12 to 17 Nov 2026, scanned through Treg.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<div class="rail">
+  <div class="wrap rail-inner">
+    <label class="search" for="q">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search accounts, captions or topics" autocomplete="off">
+      <kbd>/</kbd>
+    </label>
+    <div class="seg" role="group" aria-label="Platform" id="segPlat">
+      <button type="button" data-v="all" aria-pressed="true">All</button>
+      <button type="button" data-v="TikTok" aria-pressed="false">TikTok</button>
+      <button type="button" data-v="Instagram" aria-pressed="false">Instagram</button>
+    </div>
+    <div class="seg" role="group" aria-label="Account size" id="segSize">
+      <button type="button" data-v="all" aria-pressed="true">Any size</button>
+      <button type="button" data-v="small" aria-pressed="false">Under 50k</button>
+      <button type="button" data-v="big" aria-pressed="false">Big accounts</button>
+    </div>
+    <div>
+      <label class="ctl-label" for="sort">Sort</label>
+      <select id="sort">
+        <option value="mult">Biggest outlier</option>
+        <option value="metric">Most views / likes</option>
+        <option value="newest">Newest first</option>
+        <option value="followers">Smallest account</option>
+      </select>
+    </div>
+    <div class="seg" role="group" aria-label="View" id="segView">
+      <button type="button" data-v="grid" aria-pressed="true">Cards</button>
+      <button type="button" data-v="list" aria-pressed="false">List</button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="result-line">
+    <span id="count"></span>
+    <button type="button" class="linkish" id="reset" hidden>Clear filters</button>
+  </div>
+  <div class="chip-row" id="topics" aria-label="Filter by topic"></div>
+  <div class="grid" id="grid"></div>
+  <div class="list" id="list"><div class="list-scroll"><div id="listInner"></div></div></div>
+  <div class="empty" id="empty">No posts match these filters. <button type="button" class="linkish" id="reset2">Clear filters</button></div>
+</main>
+
+<footer class="method wrap">
+  <p><b>How the outlier score works.</b> TikTok: a post's views divided by the median views of the account's latest ~20 posts. Instagram: likes against the median likes of the latest 12 posts, since hashtag results don't return views.</p>
+  <p><b>Who made the list.</b> Accounts under 50k followers needed 3x or more. Accounts over 50k only got in at 10x or more. All 40 small-account outliers are here, plus the 10 strongest from bigger accounts.</p>
+  <p><b>Good to know.</b> "What it is" is written from each caption, not from watching the video. Some of the biggest multiples come from tiny or repost-style accounts, so give them a look before using one as a reference. Scan cost on Treg: about $0.24.</p>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="dHandle">
+  <div class="d-top">
+    <div class="d-nav">
+      <button type="button" class="icon-btn" id="prev" aria-label="Previous post">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="next" aria-label="Next post">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+    <span class="meta" id="dPos"></span>
+    <button type="button" class="icon-btn" id="close" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="d-body" id="dBody"></div>
+</aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const DATA = [{"rank": 1, "handle": "ketterl.goodrow", "platform": "TikTok", "format": "Video", "mult": 5412.3, "metric": 4151237, "median": 767, "followers": 14338, "small": true, "posted": "2026-11-14", "url": "https://www.tiktok.com/@ketterl.goodrow/video/7707971933253553422", "note": "Kitchen tips clip with a comedy angle", "caption": "Kitchen tips #funnyvideo #tips #cooking", "topic": "lifehack", "basis": "views", "postId": "7707971933253553422", "duration": 0}, {"rank": 2, "handle": "rufaaa00", "platform": "TikTok", "format": "Video", "mult": 3428.3, "metric": 3044360, "median": 888, "followers": 1219, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@rufaaa00/video/7708205983478091021", "note": "Nostalgic Christmas decor aesthetic, 13s mood piece", "caption": "#christmas #nostalgia #christmasdecor #aesthetic #winter", "topic": "christmas", "basis": "views", "postId": "7708205983478091021", "duration": 13}, {"rank": 3, "handle": "fruit.ai790", "platform": "TikTok", "format": "Video", "mult": 2580.5, "metric": 820598, "median": 318, "followers": 88160, "small": false, "posted": "2026-11-12", "url": "https://www.tiktok.com/@fruit.ai790/video/7707271216750513438", "note": "AI fruit \"drama\" story series (talking fruit characters)", "caption": "#fruitai #aifruit #fruitdrama #aifruitstories", "topic": "ai", "basis": "views", "postId": "7707271216750513438", "duration": 90}, {"rank": 4, "handle": "tw.amnishi.legend", "platform": "TikTok", "format": "Slideshow", "mult": 2242.6, "metric": 2103593, "median": 938, "followers": 12609, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@tw.amnishi.legend/video/7708309104938290440", "note": "Fortnite slideshow edit set to a trending song", "caption": "Fortnite PirateToken edit, song: Cradles (Hoodtrap), #slideshow", "topic": "slideshow", "basis": "views", "postId": "7708309104938290440", "duration": 12}, {"rank": 5, "handle": "hugilohfz4b", "platform": "TikTok", "format": "Video", "mult": 2131.9, "metric": 2114837, "median": 992, "followers": 3689, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@hugilohfz4b/video/7708780044482563350", "note": "\"I unlocked secret keyboard lights\" tech hack", "caption": "I Unlocked Secret Keyboard Lights! #lifehacks #DIY #keyboard", "topic": "lifehack", "basis": "views", "postId": "7708780044482563350", "duration": 11}, {"rank": 6, "handle": "colebell0", "platform": "TikTok", "format": "Video", "mult": 1716.5, "metric": 7935365, "median": 4623, "followers": 139678, "small": false, "posted": "2026-11-13", "url": "https://www.tiktok.com/@colebell0/video/7707461903852784909", "note": "\"I can't believe it didn't melt…\" experiment hack", "caption": "I can't believe it didn't melt… #lifehackvideo #factorcap", "topic": "lifehack", "basis": "views", "postId": "7707461903852784909", "duration": 64}, {"rank": 7, "handle": "onetoxgwh41", "platform": "TikTok", "format": "Video", "mult": 1387.5, "metric": 2539149, "median": 1830, "followers": 107380, "small": false, "posted": "2026-11-15", "url": "https://www.tiktok.com/@onetoxgwh41/video/7708101783004007694", "note": "AI-animated cat cartoon (Seedance)", "caption": "#ai #animation #cartoon #seedance (AI cat cartoon)", "topic": "ai", "basis": "views", "postId": "7708101783004007694", "duration": 27}, {"rank": 8, "handle": "kennykeyss", "platform": "TikTok", "format": "Video", "mult": 1216.3, "metric": 1162813, "median": 956, "followers": 14734, "small": true, "posted": "2026-11-17", "url": "https://www.tiktok.com/@kennykeyss/video/7708836299058449695", "note": "Relatable skit: checking your bank and Chase is down", "caption": "When you check your bank account and Chase decides it's taking the day off", "topic": "money", "basis": "views", "postId": "7708836299058449695", "duration": 11}, {"rank": 9, "handle": "indifferentsocks", "platform": "TikTok", "format": "Video", "mult": 973.8, "metric": 1557027, "median": 1599, "followers": 410, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@indifferentsocks/video/7708611494044388639", "note": "College skit: one week till Thanksgiving", "caption": "One week till Thanksgiving and that's not soon enough #college", "topic": "college", "basis": "views", "postId": "7708611494044388639", "duration": 33}, {"rank": 10, "handle": "imawesomesause0914", "platform": "TikTok", "format": "Video", "mult": 842.2, "metric": 400025, "median": 475, "followers": 294, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@imawesomesause0914/video/7708159740999683359", "note": "6s relatable teeth meme", "caption": "So relatable #relatable #teeth #funny", "topic": "relatable", "basis": "views", "postId": "7708159740999683359", "duration": 6}, {"rank": 11, "handle": "soroccoates", "platform": "TikTok", "format": "Video", "mult": 698.3, "metric": 1523711, "median": 2182, "followers": 732, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@soroccoates/video/7708094630235098382", "note": "8s college clip with a duet partner", "caption": "#fyp #college @tommy dinardo", "topic": "college", "basis": "views", "postId": "7708094630235098382", "duration": 8}, {"rank": 12, "handle": "factivezone", "platform": "TikTok", "format": "Video", "mult": 685.3, "metric": 2131842, "median": 3111, "followers": 44395, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@factivezone/video/7708600313745378590", "note": "Hindi family prank comedy (saas-bahu)", "caption": "Tiktok Foryou Trick / Funny pranks videos #comedyindia #saasbahu", "topic": "prank", "basis": "views", "postId": "7708600313745378590", "duration": 118}, {"rank": 13, "handle": "allaroundcontent0", "platform": "TikTok", "format": "Video", "mult": 576.6, "metric": 3548883, "median": 6155, "followers": 3560, "small": true, "posted": "2026-11-17", "url": "https://www.tiktok.com/@allaroundcontent0/video/7708799793677585694", "note": "Debate clip reposted as \"inspiration\"", "caption": "Inspiration #myron #Love #debate #college", "topic": "college", "basis": "views", "postId": "7708799793677585694", "duration": 59}, {"rank": 14, "handle": "lovepet342", "platform": "TikTok", "format": "Video", "mult": 527.8, "metric": 392694, "median": 744, "followers": 11491, "small": true, "posted": "2026-11-14", "url": "https://www.tiktok.com/@lovepet342/video/7707961737399651614", "note": "Clingy cat compilation", "caption": "When you have clingy cat #funny #cat #catsoftiktok", "topic": "cat", "basis": "views", "postId": "7707961737399651614", "duration": 112}, {"rank": 15, "handle": "twins_street", "platform": "TikTok", "format": "Video", "mult": 482.9, "metric": 23706775, "median": 49092, "followers": 28503, "small": true, "posted": "2026-11-14", "url": "https://www.tiktok.com/@twins_street/video/7708024943325220128", "note": "Couple \"smooth\" trend, part 2", "caption": "Partie 2 : Smooth #couple #viral #trend", "topic": "couple", "basis": "views", "postId": "7708024943325220128", "duration": 7}, {"rank": 16, "handle": "dishbug", "platform": "Instagram", "format": "Reel", "mult": 375.4, "metric": 198230, "median": 528, "followers": 14855, "small": true, "posted": "2026-11-16", "url": "https://www.instagram.com/p/Dfxp0xUNhfk/", "note": "Siamese cat meme, \"plz use ur eyes\"", "caption": "plz use ur eyes.. #cats #siamesecat", "topic": "cats", "basis": "likes", "postId": "Dfxp0xUNhfk", "duration": null}, {"rank": 17, "handle": "amandixforex", "platform": "TikTok", "format": "Video", "mult": 260.8, "metric": 1567482, "median": 6011, "followers": 30592, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@amandixforex/video/7708187120459943182", "note": "Trading indicator showcase (GainzAlgo V2 Alpha)", "caption": "I always use the Gainzalgo V2 Alpha indicator #crypto #forex #tradingview", "topic": "trading", "basis": "views", "postId": "7708187120459943182", "duration": 51}, {"rank": 18, "handle": "_toopsecret__", "platform": "TikTok", "format": "Slideshow", "mult": 236.9, "metric": 1605285, "median": 6775, "followers": 7227, "small": true, "posted": "2026-11-13", "url": "https://www.tiktok.com/@_toopsecret__/video/7707364605227453718", "note": "Photo dump slideshow", "caption": "#dump #anuel #photosdumps (photo dump)", "topic": "photodump", "basis": "views", "postId": "7707364605227453718", "duration": 38}, {"rank": 19, "handle": "fawizzy_official", "platform": "TikTok", "format": "Video", "mult": 233.2, "metric": 1403677, "median": 6020, "followers": 140519, "small": false, "posted": "2026-11-14", "url": "https://www.tiktok.com/@fawizzy_official/video/7708009634858061062", "note": "Relatable school memes compilation", "caption": "relatable school memes #fyp #joke", "topic": "relatable", "basis": "views", "postId": "7708009634858061062", "duration": 12}, {"rank": 20, "handle": "brnvt61", "platform": "TikTok", "format": "Video", "mult": 232.1, "metric": 3203017, "median": 13799, "followers": 95320, "small": false, "posted": "2026-11-12", "url": "https://www.tiktok.com/@brnvt61/video/7707238098500865293", "note": "Funny dogs clip", "caption": "The dogs #dogsoftiktok #dogsfunny", "topic": "dog", "basis": "views", "postId": "7707238098500865293", "duration": 16}, {"rank": 21, "handle": "unclerich97", "platform": "TikTok", "format": "Video", "mult": 230.2, "metric": 108677, "median": 472, "followers": 510, "small": true, "posted": "2026-11-13", "url": "https://www.tiktok.com/@unclerich97/video/7707332870855003412", "note": "News explainer: Ghana launches new currency notes", "caption": "BREAKING NEWS FROM GHANA! Ghana has officially launched its new currency notes", "topic": "money", "basis": "views", "postId": "7707332870855003412", "duration": 22}, {"rank": 22, "handle": "kailynannefetterman", "platform": "TikTok", "format": "Video", "mult": 218.3, "metric": 456874, "median": 2093, "followers": 4877, "small": true, "posted": "2026-11-13", "url": "https://www.tiktok.com/@kailynannefetterman/video/7707414976054463774", "note": "College comedy skit about broken headphones", "caption": "Featuring a big knot on my broken headphones #comedy #skit #college", "topic": "college", "basis": "views", "postId": "7707414976054463774", "duration": 21}, {"rank": 23, "handle": "consthg.g", "platform": "TikTok", "format": "Video", "mult": 197.2, "metric": 194672, "median": 987, "followers": 60966, "small": false, "posted": "2026-11-17", "url": "https://www.tiktok.com/@consthg.g/video/7708867862059830546", "note": "Quick tip: removing scuffs from patent leather (Spanish)", "caption": "La solución más rápida para quitar esos molestos rayones del charol #tips #zapatos", "topic": "tips", "basis": "views", "postId": "7708867862059830546", "duration": 16}, {"rank": 24, "handle": "sstephaniesantoss", "platform": "TikTok", "format": "Video", "mult": 126.8, "metric": 720665, "median": 5684, "followers": 131275, "small": false, "posted": "2026-11-16", "url": "https://www.tiktok.com/@sstephaniesantoss/video/7708501475143503134", "note": "Mom skit: \"always when I'm doing something important\"", "caption": "It's always when I'm doing something important #MomsofTikTok", "topic": "momlife", "basis": "views", "postId": "7708501475143503134", "duration": 24}, {"rank": 25, "handle": "amirrchi", "platform": "TikTok", "format": "Video", "mult": 119.4, "metric": 466247, "median": 3904, "followers": 13879, "small": true, "posted": "2026-11-14", "url": "https://www.tiktok.com/@amirrchi/video/7707996312230186292", "note": "Artist pain drawing skit", "caption": "#artistpain #artist #drawing #art", "topic": "art", "basis": "views", "postId": "7707996312230186292", "duration": 25}, {"rank": 26, "handle": "vydance7", "platform": "TikTok", "format": "Video", "mult": 104.2, "metric": 391698, "median": 3759, "followers": 15091, "small": true, "posted": "2026-11-13", "url": "https://www.tiktok.com/@vydance7/video/7707634164043959574", "note": "Christmas dance with stickers", "caption": "This Christmas is gonna be 🔥 #dancing #stickers #christmas", "topic": "christmas", "basis": "views", "postId": "7707634164043959574", "duration": 31}, {"rank": 27, "handle": "priimolaughs", "platform": "Instagram", "format": "Single image", "mult": 102.6, "metric": 3900, "median": 38, "followers": 45051, "small": true, "posted": "2026-11-15", "url": "https://www.instagram.com/p/Dfv8m-wxpME/", "note": "Relatable meme graphic (single image)", "caption": "#viral #relatable", "topic": "relatable", "basis": "likes", "postId": "Dfv8m-wxpME", "duration": null}, {"rank": 28, "handle": "idkoops0", "platform": "TikTok", "format": "Video", "mult": 99.2, "metric": 772535, "median": 7791, "followers": 172, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@idkoops0/video/7708064571658865953", "note": "10s \"real\" meme clip", "caption": "#real #xyzabc #viral", "topic": "photodump", "basis": "views", "postId": "7708064571658865953", "duration": 10}, {"rank": 29, "handle": "kaylasluttforsanta", "platform": "TikTok", "format": "Video", "mult": 97.5, "metric": 83570, "median": 857, "followers": 1658, "small": true, "posted": "2026-11-17", "url": "https://www.tiktok.com/@kaylasluttforsanta/video/7708818901517290766", "note": "College \"we ball\" relatable clip", "caption": "we ball #college #relatable", "topic": "college", "basis": "views", "postId": "7708818901517290766", "duration": 8}, {"rank": 30, "handle": "wes.saint", "platform": "TikTok", "format": "Video", "mult": 93.4, "metric": 3424137, "median": 36655, "followers": 732129, "small": false, "posted": "2026-11-12", "url": "https://www.tiktok.com/@wes.saint/video/7707271116397579522", "note": "POV: that one friend with bad memory", "caption": "#pov #relatable #thatonefriend #badmemory", "topic": "relatable", "basis": "views", "postId": "7707271116397579522", "duration": 21}, {"rank": 31, "handle": "idropdaily", "platform": "TikTok", "format": "Video", "mult": 92.2, "metric": 87886, "median": 953, "followers": 11418, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@idropdaily/video/7708121686062730518", "note": "Trading meme: \"I just need $1000, I'll make it back\"", "caption": "\"I just need $1000 I'll make it back I promise…\" #Trading #XAUUSD #Forex", "topic": "trading", "basis": "views", "postId": "7708121686062730518", "duration": 5}, {"rank": 32, "handle": "azamarieee", "platform": "TikTok", "format": "Video", "mult": 87.8, "metric": 192753, "median": 2195, "followers": 1693, "small": true, "posted": "2026-11-17", "url": "https://www.tiktok.com/@azamarieee/video/7708862047315905805", "note": "NYC relatable 10s clip", "caption": "likeeeeeeee #relatable #nyc #trending", "topic": "relatable", "basis": "views", "postId": "7708862047315905805", "duration": 10}, {"rank": 33, "handle": "dailylifehot", "platform": "TikTok", "format": "Video", "mult": 86.0, "metric": 212202, "median": 2467, "followers": 505, "small": true, "posted": "2026-11-17", "url": "https://www.tiktok.com/@dailylifehot/video/7708833453525060882", "note": "Gadget reveal: \"why didn't I know about this sooner\"", "caption": "Why didn't I know about this gadget sooner?! #lifehacks #gadgets", "topic": "lifehack", "basis": "views", "postId": "7708833453525060882", "duration": 9}, {"rank": 34, "handle": "mawnlowerrrr", "platform": "TikTok", "format": "Slideshow", "mult": 84.7, "metric": 58558, "median": 691, "followers": 258, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@mawnlowerrrr/video/7708636425536703757", "note": "Class assignment slideshow joke", "caption": "DAILEY IS THE NAME OF MY CLASSMATE CHILL… very easy assignment", "topic": "slideshow", "basis": "views", "postId": "7708636425536703757", "duration": 17}, {"rank": 35, "handle": "alexytyba5e", "platform": "TikTok", "format": "Video", "mult": 79.0, "metric": 295765, "median": 3746, "followers": 51035, "small": false, "posted": "2026-11-13", "url": "https://www.tiktok.com/@alexytyba5e/video/7707610322294557982", "note": "AI-generated video", "caption": "#AIGenerated #AIVideo #MadeWithAI", "topic": "ai", "basis": "views", "postId": "7707610322294557982", "duration": 15}, {"rank": 36, "handle": "dilkibaatein.pk", "platform": "TikTok", "format": "Video", "mult": 67.8, "metric": 1378485, "median": 20317, "followers": 15678, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@dilkibaatein.pk/video/7708622423582657814", "note": "Loyalty test relationship drama (Urdu/Hindi)", "caption": "Dil ke baatein, Loyalty test me khula sach ya phir shak? #LoyaltyTest", "topic": "prank", "basis": "views", "postId": "7708622423582657814", "duration": 153}, {"rank": 37, "handle": "hot.doggo92", "platform": "TikTok", "format": "Video", "mult": 66.4, "metric": 460936, "median": 6938, "followers": 4786, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@hot.doggo92/video/7708372287614930189", "note": "Grinch Christmas product with \"comment Xmas\" CTA", "caption": "Comment \"Xmas\" if you NEED this! #grinch #christmas", "topic": "christmas", "basis": "views", "postId": "7708372287614930189", "duration": 13}, {"rank": 38, "handle": "l_p_arts", "platform": "TikTok", "format": "Video", "mult": 66.4, "metric": 810083, "median": 12200, "followers": 3195, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@l_p_arts/video/7708566370811776278", "note": "Relatable artist struggle clip", "caption": "Smh #arttiktok", "topic": "art", "basis": "views", "postId": "7708566370811776278", "duration": 23}, {"rank": 39, "handle": "evancarmichael", "platform": "Instagram", "format": "Reel", "mult": 66.3, "metric": 5905, "median": 89, "followers": 589253, "small": false, "posted": "2026-11-14", "url": "https://www.instagram.com/p/DftLwcoAicB/", "note": "Motivational quote reel", "caption": "#motivationalquotes #motivation #inspiration", "topic": "motivation", "basis": "likes", "postId": "DftLwcoAicB", "duration": null}, {"rank": 40, "handle": "baloneyproductions", "platform": "TikTok", "format": "Video", "mult": 62.1, "metric": 435647, "median": 7010, "followers": 5256, "small": true, "posted": "2026-11-17", "url": "https://www.tiktok.com/@baloneyproductions/video/7708935799416376607", "note": "Dentist bloopers skit", "caption": "Average dentist bloopers #skit #bloopers", "topic": "skit", "basis": "views", "postId": "7708935799416376607", "duration": 122}, {"rank": 41, "handle": "superseceret2013", "platform": "TikTok", "format": "Video", "mult": 57.0, "metric": 324438, "median": 5692, "followers": 271, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@superseceret2013/video/7708138679037857056", "note": "5s relatable repost", "caption": "#funny #repost #relatable", "topic": "relatable", "basis": "views", "postId": "7708138679037857056", "duration": 5}, {"rank": 42, "handle": "amandixforex", "platform": "TikTok", "format": "Video", "mult": 50.9, "metric": 306154, "median": 6011, "followers": 30592, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@amandixforex/video/7708227410214292767", "note": "Trading indicator showcase (GainzAlgo V2 Alpha)", "caption": "The indicator is called GainzAlgo V2 Alpha. #trading #forex #xauusd", "topic": "trading", "basis": "views", "postId": "7708227410214292767", "duration": 19}, {"rank": 43, "handle": "alexvidalll0", "platform": "TikTok", "format": "Video", "mult": 50.9, "metric": 2811119, "median": 55247, "followers": 14722, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@alexvidalll0/video/7708735404446338326", "note": "AI room makeover prank on dad (Ora AI app, Spanish)", "caption": "la app es Ora AI para los que preguntan… mi padre solo quería la entrada un metro más ancha", "topic": "prank", "basis": "views", "postId": "7708735404446338326", "duration": 80}, {"rank": 44, "handle": "malayas15", "platform": "TikTok", "format": "Video", "mult": 49.1, "metric": 646919, "median": 13187, "followers": 3002, "small": true, "posted": "2026-11-16", "url": "https://www.tiktok.com/@malayas15/video/7708448442376391949", "note": "9s relatable clip", "caption": "#fyp #hg #relateable", "topic": "relatable", "basis": "views", "postId": "7708448442376391949", "duration": 9}, {"rank": 45, "handle": "andclips14.04", "platform": "TikTok", "format": "Video", "mult": 46.6, "metric": 1202636, "median": 25818, "followers": 349, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@andclips14.04/video/7708420821533871380", "note": "Crypto story: Chinese trader \"48Clublan\" (Indonesian)", "caption": "Seorang trader kripto asal China yang dikenal dengan nama 48Clublan…", "topic": "crypto", "basis": "views", "postId": "7708420821533871380", "duration": 24}, {"rank": 46, "handle": "ssstacy11", "platform": "TikTok", "format": "Video", "mult": 45.8, "metric": 826618, "median": 18060, "followers": 24219, "small": true, "posted": "2026-11-12", "url": "https://www.tiktok.com/@ssstacy11/video/7707179433832074502", "note": "GRWM makeup routine", "caption": "#GRWM #makeup #routine", "topic": "grwm", "basis": "views", "postId": "7707179433832074502", "duration": 33}, {"rank": 47, "handle": "muydelulu", "platform": "TikTok", "format": "Video", "mult": 44.1, "metric": 184930, "median": 4196, "followers": 145, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@muydelulu/video/7708148552328924436", "note": "College stress: \"everything is due this month\"", "caption": "Why is everything and its mother due this month :/ #collegestudent #studytok", "topic": "college", "basis": "views", "postId": "7708148552328924436", "duration": 18}, {"rank": 48, "handle": "y2k.dde", "platform": "TikTok", "format": "Video", "mult": 43.3, "metric": 268980, "median": 6208, "followers": 3526, "small": true, "posted": "2026-11-17", "url": "https://www.tiktok.com/@y2k.dde/video/7708882819858173191", "note": "Portuguese reaction meme", "caption": "gente eu tô morrendo KKKKKKKKK tadinha #meme", "topic": "meme", "basis": "views", "postId": "7708882819858173191", "duration": 76}, {"rank": 49, "handle": "kali_nk4", "platform": "TikTok", "format": "Video", "mult": 40.5, "metric": 177940, "median": 4396, "followers": 3736, "small": true, "posted": "2026-11-15", "url": "https://www.tiktok.com/@kali_nk4/video/7708112118163262741", "note": "GRWM makeup, \"going home today\"", "caption": "Going home tdy #makeup #grwm", "topic": "grwm", "basis": "views", "postId": "7708112118163262741", "duration": 55}, {"rank": 50, "handle": "storiesbyfariz", "platform": "Instagram", "format": "Reel", "mult": 27.6, "metric": 31400, "median": 1136, "followers": 28810, "small": true, "posted": "2026-11-15", "url": "https://www.instagram.com/p/Dfv4rHDqLCv/", "note": "\"Food is good\" food reel", "caption": "Food is good", "topic": "foodie", "basis": "likes", "postId": "Dfv4rHDqLCv", "duration": null}];
+
+const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + 'M'
+  : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
+const fmtMult = m => m >= 100 ? Math.round(m).toLocaleString('en-US') : m.toFixed(1);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const dateLabel = iso => new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const maxLog = Math.log10(Math.max(...DATA.map(d => d.mult)));
+const meterPct = m => Math.max(6, Math.min(100, Math.log10(Math.max(m, 1)) / maxLog * 100));
+const metricWord = d => String(d.basis).toLowerCase() === 'views' ? 'views' : 'likes';
+const canEmbed = /^https?:$/.test(location.protocol) && !/claude|anthropic/i.test(location.hostname);
+
+const state = { q: '', plat: 'all', size: 'all', sort: 'mult', view: 'grid', topic: null };
+try { Object.assign(state, JSON.parse(localStorage.getItem('vob-state') || '{}'), { q: '', topic: null }); } catch (e) {}
+const save = () => { try { localStorage.setItem('vob-state', JSON.stringify({ plat: state.plat, size: state.size, sort: state.sort, view: state.view })); } catch (e) {} };
+
+let shown = [];
+let openIdx = -1;
+
+function stats() {
+  const small = DATA.filter(d => d.small).length;
+  const mults = DATA.map(d => d.mult).sort((a, b) => a - b);
+  const med = mults[Math.floor(mults.length / 2)];
+  const totalViews = DATA.filter(d => metricWord(d) === 'views').reduce((a, d) => a + d.metric, 0);
+  document.getElementById('stats').innerHTML = [
+    [DATA.length, 'posts'],
+    [small, 'from accounts under 50k'],
+    [fmtMult(med) + 'x', 'median outlier'],
+    [fmtN(totalViews), 'TikTok views combined']
+  ].map(([b, s]) => `<div class="stat"><b>${b}</b><small>${s}</small></div>`).join('');
+}
+
+function topics() {
+  const counts = {};
+  DATA.forEach(d => { counts[d.topic] = (counts[d.topic] || 0) + 1; });
+  const list = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  document.getElementById('topics').innerHTML = list.map(([t, c]) =>
+    `<button type="button" class="chip${state.topic === t ? ' on' : ''}" data-topic="${esc(t)}" aria-pressed="${state.topic === t}">${esc(t)} <span class="num">${c}</span></button>`).join('');
+}
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  let out = DATA.filter(d =>
+    (state.plat === 'all' || d.platform === state.plat) &&
+    (state.size === 'all' || (state.size === 'small' ? d.small : !d.small)) &&
+    (!state.topic || d.topic === state.topic) &&
+    (!q || [d.handle, d.note, d.caption, d.topic, d.format].join(' ').toLowerCase().includes(q)));
+  const by = {
+    mult: (a, b) => b.mult - a.mult,
+    metric: (a, b) => b.metric - a.metric,
+    newest: (a, b) => b.posted.localeCompare(a.posted) || b.mult - a.mult,
+    followers: (a, b) => a.followers - b.followers
+  }[state.sort];
+  return out.sort(by);
+}
+
+function sizeTag(d) {
+  return d.small ? '<span class="size-tag small">Under 50k</span>' : '<span class="size-tag big">Big account</span>';
+}
+
+function card(d, i) {
+  return `<article class="card" tabindex="0" role="button" data-i="${i}" aria-label="Open @${esc(d.handle)}, ${fmtMult(d.mult)}x outlier">
+    <div class="card-head">
+      <div class="rank">${d.rank}</div>
+      <div class="who">
+        <div class="handle">@${esc(d.handle)}</div>
+        <div class="meta"><span class="plat"><i class="dot ${d.platform === 'TikTok' ? 'tt' : 'ig'}"></i>${d.platform}</span><span>${esc(d.format)}</span><span>${dateLabel(d.posted)}</span></div>
+      </div>
+      ${sizeTag(d)}
+    </div>
+    <div class="hero">
+      <div class="mult"><b>${fmtMult(d.mult)}x</b><small>their usual ${metricWord(d)}</small></div>
+      <div class="meter" aria-hidden="true"><i style="width:${meterPct(d.mult)}%"></i></div>
+    </div>
+    <p class="note">${esc(d.note)}</p>
+    <div class="foot">
+      <span><span class="num">${fmtN(d.metric)}</span> ${metricWord(d)} vs <span class="num">${fmtN(d.median)}</span> usual</span>
+      <span><span class="num">${fmtN(d.followers)}</span> followers</span>
+    </div>
+  </article>`;
+}
+
+function row(d, i) {
+  return `<div class="row" tabindex="0" role="button" data-i="${i}">
+    <span class="num">${d.rank}</span>
+    <span class="ellip"><b>@${esc(d.handle)}</b></span>
+    <span class="r-mult">${fmtMult(d.mult)}x</span>
+    <span class="num">${fmtN(d.metric)}</span>
+    <span class="ellip">${esc(d.note)}</span>
+    <span class="meta"><i class="dot ${d.platform === 'TikTok' ? 'tt' : 'ig'}"></i> ${d.platform} · ${esc(d.format)}</span>
+    <span class="num">${fmtN(d.followers)}</span>
+  </div>`;
+}
+
+function render() {
+  shown = filtered();
+  document.getElementById('grid').innerHTML = shown.map(card).join('');
+  document.getElementById('listInner').innerHTML =
+    `<div class="row head"><span>#</span><span>Account</span><span>Outlier</span><span>Views/likes</span><span>What it is</span><span>Platform</span><span>Followers</span></div>` +
+    shown.map(row).join('');
+  const isList = state.view === 'list';
+  document.getElementById('grid').classList.toggle('hide', isList);
+  document.getElementById('list').classList.toggle('show', isList);
+  document.getElementById('empty').classList.toggle('show', shown.length === 0);
+  const filtersOn = state.q || state.plat !== 'all' || state.size !== 'all' || state.topic;
+  document.getElementById('count').textContent = filtersOn ? `Showing ${shown.length} of ${DATA.length} posts` : `All ${DATA.length} posts`;
+  document.getElementById('reset').hidden = !filtersOn;
+  topics();
+  syncSegs();
+}
+
+function syncSegs() {
+  [['segPlat', 'plat'], ['segSize', 'size'], ['segView', 'view']].forEach(([id, key]) => {
+    document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state[key])));
+  });
+  document.getElementById('sort').value = state.sort;
+}
+
+function embedHtml(d) {
+  if (!canEmbed) {
+    return `<p class="embed-note">The video preview plays on the GitHub Pages version of this board. Here, use the button above to watch it.</p>`;
+  }
+  if (d.platform === 'TikTok') {
+    return `<div class="embed"><iframe src="https://www.tiktok.com/embed/v2/${esc(d.postId)}" height="740" allow="encrypted-media; fullscreen" loading="lazy" title="TikTok post by @${esc(d.handle)}"></iframe></div>`;
+  }
+  return `<div class="embed"><iframe src="https://www.instagram.com/p/${esc(d.postId)}/embed" height="640" loading="lazy" title="Instagram post by @${esc(d.handle)}"></iframe></div>`;
+}
+
+function openDrawer(i) {
+  if (i < 0 || i >= shown.length) return;
+  openIdx = i;
+  const d = shown[i];
+  const pct = Math.max(1.5, d.median / d.metric * 100);
+  document.getElementById('dPos').textContent = `${i + 1} of ${shown.length}`;
+  document.getElementById('prev').disabled = i === 0;
+  document.getElementById('next').disabled = i === shown.length - 1;
+  document.getElementById('dBody').innerHTML = `
+    <div class="d-title">
+      <div class="meta"><span class="plat"><i class="dot ${d.platform === 'TikTok' ? 'tt' : 'ig'}"></i>${d.platform}</span><span>${esc(d.format)}</span><span>Rank ${d.rank}</span></div>
+      <h2 id="dHandle">@${esc(d.handle)}</h2>
+      <div>${sizeTag(d)}</div>
+    </div>
+    <div class="d-big"><b>${fmtMult(d.mult)}x</b><span class="meta">their usual ${metricWord(d)}</span></div>
+    <div class="compare" aria-label="This post compared with the account's usual">
+      <div class="cmp-row"><span>This post</span><span class="bar"><i style="width:100%;background:var(--accent)"></i></span><span class="num">${d.metric.toLocaleString('en-US')}</span></div>
+      <div class="cmp-row"><span>Usual post</span><span class="bar"><i style="width:${pct}%;background:var(--muted)"></i></span><span class="num">${d.median.toLocaleString('en-US')}</span></div>
+    </div>
+    <div class="actions">
+      <a class="btn primary" href="${esc(d.url)}" target="_blank" rel="noopener">Open on ${d.platform}</a>
+      <button type="button" class="btn" id="copyBtn">Copy link</button>
+    </div>
+    ${embedHtml(d)}
+    <div>
+      <p class="section-label">What it is</p>
+      <p class="note">${esc(d.note)}</p>
+    </div>
+    <div>
+      <p class="section-label">Caption</p>
+      <p class="caption">${esc(d.caption)}</p>
+    </div>
+    <div class="facts">
+      <div class="fact"><small>Followers</small><span class="num">${d.followers.toLocaleString('en-US')}</span></div>
+      <div class="fact"><small>Posted</small><span>${dateLabel(d.posted)} 2026</span></div>
+      <div class="fact"><small>Found through</small><span>${esc(d.topic)}</span></div>
+      <div class="fact"><small>Length</small><span>${d.duration ? d.duration + ' sec' : 'Not listed'}</span></div>
+    </div>`;
+  document.getElementById('copyBtn').addEventListener('click', () => copy(d.url));
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer').setAttribute('aria-hidden', 'false');
+  document.getElementById('scrim').classList.add('open');
+  document.getElementById('dBody').scrollTop = 0;
+  document.getElementById('close').focus({ preventScroll: true });
+}
+
+function closeDrawer() {
+  if (openIdx < 0) return;
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer').setAttribute('aria-hidden', 'true');
+  document.getElementById('scrim').classList.remove('open');
+  document.getElementById('dBody').innerHTML = '';
+  const back = document.querySelector(`[data-i="${openIdx}"]:not(.head)`);
+  openIdx = -1;
+  if (back) back.focus({ preventScroll: true });
+}
+
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); toast('Link copied'); }
+  catch (e) { toast('Copy was blocked. Use Open instead.'); }
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function resetAll() {
+  Object.assign(state, { q: '', plat: 'all', size: 'all', topic: null });
+  document.getElementById('q').value = '';
+  save(); render();
+}
+
+document.getElementById('q').addEventListener('input', e => { state.q = e.target.value; render(); });
+[['segPlat', 'plat'], ['segSize', 'size'], ['segView', 'view']].forEach(([id, key]) => {
+  document.getElementById(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    state[key] = b.dataset.v; save(); render();
+  });
+});
+document.getElementById('sort').addEventListener('change', e => { state.sort = e.target.value; save(); render(); });
+document.getElementById('topics').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  state.topic = state.topic === b.dataset.topic ? null : b.dataset.topic; render();
+});
+document.getElementById('reset').addEventListener('click', resetAll);
+document.getElementById('reset2').addEventListener('click', resetAll);
+['grid', 'listInner'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('click', e => { const c = e.target.closest('[data-i]'); if (c && !c.classList.contains('head')) openDrawer(+c.dataset.i); });
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const c = e.target.closest('[data-i]'); if (c) { e.preventDefault(); openDrawer(+c.dataset.i); }
+  });
+});
+document.getElementById('scrim').addEventListener('click', closeDrawer);
+document.getElementById('close').addEventListener('click', closeDrawer);
+document.getElementById('prev').addEventListener('click', () => openDrawer(openIdx - 1));
+document.getElementById('next').addEventListener('click', () => openDrawer(openIdx + 1));
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+  if (e.key === '/' && !typing) { e.preventDefault(); document.getElementById('q').focus(); return; }
+  if (openIdx < 0) return;
+  if (e.key === 'Escape') closeDrawer();
+  else if (!typing && (e.key === 'ArrowRight' || e.key === 'j')) openDrawer(openIdx + 1);
+  else if (!typing && (e.key === 'ArrowLeft' || e.key === 'k')) openDrawer(openIdx - 1);
+});
+
+stats();
+render();
+</script>
+</body>
+</html>
