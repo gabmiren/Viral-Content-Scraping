@@ -1,28 +1,23 @@
-# Viral Content Scraping
+# Viral Outlier Radar
 
-A browsable board of viral outlier posts from TikTok and Instagram, found through Treg scans.
+A browsable page of viral outlier posts from TikTok and Instagram, found by Treg scans. An outlier is a post that does far better than its own account usually does.
 
-An outlier is a post that performs far above its own account's usual numbers. The board ranks them, lets you filter by platform, account size and topic, and opens each post in a side panel with the numbers and a link.
+Open it: https://gabmiren.github.io/Viral-Content-Scraping/
 
-## Files
+## What's on the page
+- **All outliers**: the top 50 from the latest scan.
+- **TikTok** and **Instagram**: the same list split by platform.
+- **★ Saved**: ideas you starred. Saved in your browser.
 
-- `index.html`: the board. Open it in a browser or serve it with GitHub Pages.
-- `top50.json`: the scan data behind the board.
-- `src/template.html`: the page template.
-- `build.py`: rebuilds `index.html` from the template and the data.
+Filter by account size (under 50k, or big accounts at 10x+) and by the topic search that found each post. Tips: press `/` to search, tap the caption box to copy it, **Details** shows this post against the account's usual post, ✓ marks an idea as made, and "Hide used" clears those out.
 
-## Updating with a new scan
+## How the score works
+- TikTok: post views divided by the median views of the account's latest ~20 videos.
+- Instagram: likes divided by the median likes of the latest 12 posts (hashtag results give no views).
+- Accounts under 50k followers need 3x or more. Bigger accounts need 10x or more.
+- "What it is" lines are written from captions, not from watching the videos.
 
-1. Replace `top50.json` with the new results (same fields).
-2. Run `python3 build.py`.
-3. Commit and push.
-
-## Video previews
-
-On GitHub Pages (Settings > Pages > deploy from `main`, root folder), the side panel plays each TikTok or Instagram post inline. When the page runs inside Claude, previews are off and the panel links to the post instead.
-
-## Current scan
-
-- Window: posts from 12 to 17 Nov 2026
-- Score: views divided by the account's median views over its latest ~20 posts (Instagram uses likes over the latest 12)
-- Rule: accounts under 50k followers at 3x or more; accounts over 50k at 10x or more
+## Updating after a scan
+1. Replace `data/top50.csv` (same columns) and edit `data/meta.json`.
+2. Run `python3 scripts/build_data.py` to rebuild `data.js`.
+3. Commit and push. GitHub Pages updates in about a minute.
