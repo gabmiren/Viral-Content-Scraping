@@ -29,9 +29,9 @@
   try { const v = localStorage.getItem('vor_view'); if (v) st.view = v; } catch {}
 
   const HINTS = {
-    all: 'Both top 30s side by side. Ranks are per platform, since TikTok and Instagram reward different things. Tap the caption box to copy it. ★ saves an idea, ✓ marks it as used.',
-    tiktok: 'TikTok top 30, scored on views against the account’s median over its latest ~20 videos. 24 from accounts under 50k (3x+), plus the 6 biggest outliers from large accounts (10x+).',
-    instagram: 'Instagram top 30, scored on likes against the account’s latest 12 posts (hashtag results give no views). Only 14 posts cleared the strict rule, so the list is topped up with large-account posts at 3x+, marked “Big account 3x+”.',
+    all: 'Prop firm and trading posts from the last 48 hours that beat their own account’s usual numbers. Ranks are per platform. Tap the caption box to copy it. ★ saves an idea, ✓ marks it as used.',
+    tiktok: 'TikTok top 30 from the last 48 hours, scored on views against the account’s median over its latest ~20 videos. Under 50k followers needs 3x+, bigger accounts need 10x+.',
+    instagram: 'Instagram is thin this time: only 3 posts from the last 48 hours cleared the bar. Likes on new posts take a few days to settle, and Instagram search rarely surfaces posts this fresh. Scored on likes against the account’s latest 12 posts.',
     saved: 'Everything you starred. Saved in this browser.',
   };
 
@@ -188,7 +188,7 @@
   // ---- boot ----
   const m = D.meta || {};
   const small = ALL.filter((it) => it.size === 'small').length;
-  $('#meta-line').textContent = `Updated ${m.updated || ''} · Posts from ${m.window || 'the last 5 days'} · Top 30 TikTok + top 30 Instagram, ${small} from accounts under 50k`;
+  $('#meta-line').textContent = `Updated ${m.updated || ''} · Posts from ${m.window || 'the last 5 days'} · Prop firm and trading niche · ${ALL.length} outliers, ${small} from accounts under 50k`;
   if (!['all', 'tiktok', 'instagram', 'saved'].includes(st.tab)) st.tab = 'tiktok';
   counts();
   render();

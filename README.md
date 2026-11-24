@@ -5,7 +5,8 @@ A browsable page of viral outlier posts from TikTok and Instagram, found by Treg
 Open it: https://gabmiren.github.io/Viral-Content-Scraping/
 
 ## What's on the page
-- **TikTok top 30** and **Instagram top 30**: ranked separately, because the two platforms reward different things. **Both** shows them together.
+- Current scan: prop firm and trading niche, posts from the last 48 hours only (22 to 24 Nov 2026). Anything older has been removed.
+- **TikTok** and **Instagram** are ranked separately, because the two platforms reward different things. **Both** shows them together.
 - **TikTok** and **Instagram**: the same list split by platform.
 - **★ Saved**: ideas you starred. Saved in your browser.
 
